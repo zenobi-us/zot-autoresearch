@@ -1,5 +1,9 @@
 # zot-autoresearch
 
+<img width="1007" height="438" alt="image" src="https://github.com/user-attachments/assets/c2a2fcd6-522e-4d43-8d1c-a8f4d9dff01e" />
+
+<img width="1007" height="438" alt="image" src="https://github.com/user-attachments/assets/c39bdb12-b05e-4099-b312-6809efb5d6fb" />
+
 [![CI](https://github.com/zenobi-us/zot-autoresearch/actions/workflows/ci.yml/badge.svg)](https://github.com/zenobi-us/zot-autoresearch/actions/workflows/ci.yml)
 
 Benchmark-driven autonomous research loops for [zot](https://github.com/patriceckhart/zot), inspired by [karpathy/autoresearch](https://github.com/karpathy/autoresearch), [pi-autoresearch](https://github.com/davebcn87/pi-autoresearch), and [ozeron/autoresearch](https://github.com/ozeron/autoresearch).
