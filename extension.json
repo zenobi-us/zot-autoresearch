@@ -1,8 +1,11 @@
 {
   "name": "zot-autoresearch",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "exec": "go",
-  "args": ["run", "."],
+  "args": [
+    "run",
+    "."
+  ],
   "language": "go",
   "description": "Benchmark-driven autonomous research loops with a live zot panel",
   "enabled": true
