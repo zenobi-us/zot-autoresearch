@@ -141,21 +141,23 @@ score: 4331
 │ Objective  reduce parser allocations without changing behaviour            │
 │ Runs       6/20     ✓ 3 accepted     × 2 rejected     ! 1 failed           │
 │ Baseline   7,574 µs                                                        │
-│ Best       4,331 µs     +42.82% gain     091534f                           │
+│ Best       4,331 µs     +42.82% vs baseline     091534f                    │
 │                                                                            │
-│ #   result     score          gain       commit    hypothesis              │
+│ #   result     score          vs best    total      commit    hypothesis   │
 │ ────────────────────────────────────────────────────────────────────────── │
-│ 0   ◆ baseline   7,574 µs       —          —         establish baseline    │
-│ 1   ✓ accepted   6,102 µs       +19.44%    3799d4c   cache token lookup    │
-│ 2   × rejected   6,441 µs       +14.96%    —         preallocate cursor    │
-│ 3   ! crash      —              —          —         parallel parse stage  │
-│ 4   ✓ accepted   5,018 µs       +33.74%    0b07487   avoid scan fallback   │
-│ 5   × rejected   5,203 µs       +31.31%    —         compact cursor state  │
-│ 6   ✓ accepted   4,331 µs       +42.82%    091534f   skip duplicate lookup │
+│ 0   ◆ baseline   7,574 µs       —          —          —         baseline   │
+│ 1   ✓ accepted   6,102 µs       +19.43%    +19.43%    3799d4c   cache      │
+│ 2   × rejected   6,441 µs       -5.56%     +14.96%    —         prealloc   │
+│ 3   ! crash      —              —          —          —         parallel   │
+│ 4   ✓ accepted   5,018 µs       +17.76%    +33.75%    0b07487   fallback   │
+│ 5   × rejected   5,203 µs       -3.69%     +31.30%    —         compact    │
+│ 6   ✓ accepted   4,331 µs       +13.69%    +42.82%    091534f   dedupe     │
 ├────────────────────────────────────────────────────────────────────────────┤
 │ r refresh · s stop · esc close                                             │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
+
+In the ledger, `vs best` compares each candidate with the best accepted score immediately before that run; `total` compares it with the original baseline. Positive percentages always mean better for both `minimize` and `maximize` configurations.
 
 See [`docs/TUI_DESIGN.md`](docs/TUI_DESIGN.md) for the visual hierarchy and interaction rationale.
 

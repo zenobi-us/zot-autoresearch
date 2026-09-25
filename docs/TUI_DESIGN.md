@@ -17,17 +17,17 @@ Make the state of an autonomous optimization loop legible in under two seconds:
 │ Objective  reduce parser allocations without changing behaviour            │
 │ Runs       6/20     ✓ 3 accepted     × 2 rejected     ! 1 failed           │
 │ Baseline   7,574 µs                                                        │
-│ Best       4,331 µs     +42.82% gain     091534f                           │
+│ Best       4,331 µs     +42.82% vs baseline     091534f                    │
 │                                                                            │
-│ #   result     score          gain       commit    hypothesis              │
+│ #   result     score          vs best    total      commit    hypothesis   │
 │ ────────────────────────────────────────────────────────────────────────── │
-│ 0   ◆ baseline   7,574 µs       —          —         establish baseline    │
-│ 1   ✓ accepted   6,102 µs       +19.44%    3799d4c   cache token lookup    │
-│ 2   × rejected   6,441 µs       +14.96%    —         preallocate cursor    │
-│ 3   ! crash      —              —          —         parallel parse stage  │
-│ 4   ✓ accepted   5,018 µs       +33.74%    0b07487   avoid scan fallback   │
-│ 5   × rejected   5,203 µs       +31.31%    —         compact cursor state  │
-│ 6   ✓ accepted   4,331 µs       +42.82%    091534f   skip duplicate lookup │
+│ 0   ◆ baseline   7,574 µs       —          —          —         baseline   │
+│ 1   ✓ accepted   6,102 µs       +19.43%    +19.43%    3799d4c   cache      │
+│ 2   × rejected   6,441 µs       -5.56%     +14.96%    —         prealloc   │
+│ 3   ! crash      —              —          —          —         parallel   │
+│ 4   ✓ accepted   5,018 µs       +17.76%    +33.75%    0b07487   fallback   │
+│ 5   × rejected   5,203 µs       -3.69%     +31.30%    —         compact    │
+│ 6   ✓ accepted   4,331 µs       +13.69%    +42.82%    091534f   dedupe     │
 ├────────────────────────────────────────────────────────────────────────────┤
 │ r refresh · s stop · esc close                                             │
 └────────────────────────────────────────────────────────────────────────────┘
@@ -48,7 +48,7 @@ The title carries only the run state: `running` or `stopped`. The user should no
 - **Baseline** preserves the original comparison point.
 - **Best** is visually adjacent to total gain and the accepted commit that realizes it.
 
-Gain is always normalized so positive means better, regardless of whether the configured direction is `minimize` or `maximize`.
+Both percentage columns are normalized so positive means better, regardless of whether the configured direction is `minimize` or `maximize`. **vs best** compares a candidate with the best accepted score immediately before that run and explains the accept/reject decision. **total** compares it with the original baseline and shows overall progress. A positive `vs best` may still be rejected when it does not clear a configured non-zero `min_delta`.
 
 ### Ledger
 

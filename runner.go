@@ -118,6 +118,7 @@ func (a *app) runExperiment(input experimentArgs) (string, error) {
 	number := countCandidates(a.state.Iterations) + 1
 	a.mu.Unlock()
 	gain := gainPercent(score, baseline, cfg.Direction)
+	versusBest := gainPercent(score, best, cfg.Direction)
 	if improved(score, best, cfg.Direction, cfg.MinDelta) {
 		commit, err := acceptChanges(a.cwd, scopedPaths(cfg.EditablePaths), input.Summary)
 		if err != nil {
@@ -141,7 +142,7 @@ func (a *app) runExperiment(input experimentArgs) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("save accepted result: %w", err)
 		}
-		message := fmt.Sprintf("ACCEPTED #%d %s (%+.2f%% from baseline), commit %s. %s", number, formatMetric(score, cfg.Unit), gain, commit, input.Summary)
+		message := fmt.Sprintf("ACCEPTED #%d %s (%+.2f%% vs previous best; %+.2f%% from baseline), commit %s. %s", number, formatMetric(score, cfg.Unit), versusBest, gain, commit, input.Summary)
 		if complete {
 			message += " Maximum iterations reached; summarize the run."
 		}
@@ -167,7 +168,7 @@ func (a *app) runExperiment(input experimentArgs) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("save rejected result: %w", err)
 	}
-	message := fmt.Sprintf("REJECTED #%d %s (%+.2f%% from baseline); configured paths restored to best commit. Try a materially different hypothesis.", number, formatMetric(score, cfg.Unit), gain)
+	message := fmt.Sprintf("REJECTED #%d %s (%+.2f%% vs previous best; %+.2f%% from baseline); configured paths restored to best commit. Try a materially different hypothesis.", number, formatMetric(score, cfg.Unit), versusBest, gain)
 	if complete {
 		message += " Maximum iterations reached; summarize the run."
 	}

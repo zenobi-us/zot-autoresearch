@@ -32,16 +32,17 @@ func panelForState(state runState) (string, []string, string) {
 			if commit == "" {
 				commit = "baseline"
 			}
-			lines = append(lines, fmt.Sprintf("  Best       %s     %+.2f%% gain     %s", formatMetric(*state.Best, state.Unit), gain, commit))
+			lines = append(lines, fmt.Sprintf("  Best       %s     %+.2f%% vs baseline     %s", formatMetric(*state.Best, state.Unit), gain, commit))
 		}
 	}
-	lines = append(lines, "", "  #   result     score          gain       commit    hypothesis", "  ─────────────────────────────────────────────────────────────────────────────")
+	lines = append(lines, "", "  #   result     score          vs best    total      commit    hypothesis", "  ─────────────────────────────────────────────────────────────────────────────────────────")
 	start := 0
 	if len(state.Iterations) > 12 {
 		start = len(state.Iterations) - 12
 		lines = append(lines, fmt.Sprintf("  … %d earlier runs", start))
 	}
-	for _, item := range state.Iterations[start:] {
+	priorBest := state.Baseline
+	for index, item := range state.Iterations {
 		icon := "·"
 		switch item.Status {
 		case "accepted":
@@ -58,14 +59,24 @@ func panelForState(state runState) (string, []string, string) {
 			commit = "—"
 		}
 		score := "—"
-		gain := "—"
+		versusBest := "—"
+		totalGain := "—"
 		if item.Status != "crash" && item.Status != "invalid" {
 			score = formatMetric(item.Score, state.Unit)
 			if item.Status != "baseline" {
-				gain = fmt.Sprintf("%+.2f%%", item.Gain)
+				if priorBest != nil {
+					versusBest = fmt.Sprintf("%+.2f%%", gainPercent(item.Score, *priorBest, state.Direction))
+				}
+				totalGain = fmt.Sprintf("%+.2f%%", item.Gain)
 			}
 		}
-		lines = append(lines, fmt.Sprintf("  %-3d %s %-9s %-14s %-10s %-9s %s", item.Number, icon, item.Status, score, gain, commit, compact(item.Hypothesis, 54)))
+		if index >= start {
+			lines = append(lines, fmt.Sprintf("  %-3d %s %-9s %-14s %-10s %-10s %-9s %s", item.Number, icon, item.Status, score, versusBest, totalGain, commit, compact(item.Hypothesis, 54)))
+		}
+		if item.Status == "baseline" || item.Status == "accepted" {
+			best := item.Score
+			priorBest = &best
+		}
 	}
 	if len(state.Iterations) == 0 {
 		lines = append(lines, "  No benchmark results yet.")

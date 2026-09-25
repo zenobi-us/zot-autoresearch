@@ -69,7 +69,7 @@ func TestExperimentAcceptsImprovementAndRestoresRegression(t *testing.T) {
 
 	writeFile(t, filepath.Join(dir, "score.txt"), "score: 8\n")
 	message, err = a.runExperiment(experimentArgs{Hypothesis: "make it faster", Summary: "reduce score"})
-	if err != nil || !strings.Contains(message, "ACCEPTED #1") {
+	if err != nil || !strings.Contains(message, "ACCEPTED #1") || !strings.Contains(message, "+20.00% vs previous best; +20.00% from baseline") {
 		t.Fatalf("accept: message=%q err=%v", message, err)
 	}
 	if a.state.Best == nil || *a.state.Best != 8 || a.state.BestCommit == "" {
@@ -78,7 +78,7 @@ func TestExperimentAcceptsImprovementAndRestoresRegression(t *testing.T) {
 
 	writeFile(t, filepath.Join(dir, "score.txt"), "score: 12\n")
 	message, err = a.runExperiment(experimentArgs{Hypothesis: "bad idea", Summary: "increase score"})
-	if err != nil || !strings.Contains(message, "REJECTED #2") {
+	if err != nil || !strings.Contains(message, "REJECTED #2") || !strings.Contains(message, "-50.00% vs previous best; -20.00% from baseline") {
 		t.Fatalf("reject: message=%q err=%v", message, err)
 	}
 	data, err := os.ReadFile(filepath.Join(dir, "score.txt"))
@@ -108,6 +108,12 @@ func TestPanelShowsTotalsAndCommit(t *testing.T) {
 	joined := strings.Join(lines, "\n")
 	if !strings.Contains(title, "running") || !strings.Contains(joined, "1 accepted") || !strings.Contains(joined, "abc1234") || !strings.Contains(joined, "rejected") {
 		t.Fatalf("panel:\n%s\n%s", title, joined)
+	}
+	if !strings.Contains(joined, "+20.00% vs baseline") || !strings.Contains(joined, "vs best") || !strings.Contains(joined, "total") {
+		t.Fatalf("panel does not label comparison points:\n%s", joined)
+	}
+	if !strings.Contains(joined, "+20.00%") || !strings.Contains(joined, "-12.50%") || !strings.Contains(joined, "+10.00%") {
+		t.Fatalf("panel does not compare each candidate with its prior best:\n%s", joined)
 	}
 }
 
