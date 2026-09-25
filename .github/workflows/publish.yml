@@ -35,7 +35,6 @@ jobs:
           [[ "${CHANNEL}" == next || "${CHANNEL}" == latest ]]
           [[ "${SOURCE_SHA}" =~ ^[0-9a-f]{40}$ ]]
           case "${SOURCE_BRANCH}" in master|release/*) ;; *) exit 1 ;; esac
-          [[ "${GITHUB_EVENT_NAME}" != repository_dispatch || "${GITHUB_ACTOR}" == github-actions[bot] ]]
           git init -q --bare "${RUNNER_TEMP}/verify"
           git -C "${RUNNER_TEMP}/verify" remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git -C "${RUNNER_TEMP}/verify" fetch -q origin "+refs/heads/${SOURCE_BRANCH}:refs/remotes/origin/${SOURCE_BRANCH}"
