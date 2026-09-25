@@ -9,7 +9,7 @@ The extension gives the active zot agent a mechanically scored experiment tool. 
 ## What it does
 
 - Registers one namespaced command, `/autoresearch`, with a discrete subcommand router.
-- Uses a project-local `.zot/autoresearch.json` contract for the objective, benchmark, score parser, direction, editable paths, timeout, and iteration limit.
+- Uses a project-local `.zot/autoresearch.json`, `.toml`, `.yaml`, or `.yml` contract for the objective, benchmark, score parser, direction, editable paths, timeout, and iteration limit.
 - Establishes a baseline before candidates can be evaluated.
 - Derives accept/reject decisions from the captured score rather than trusting the model.
 - Commits accepted in-scope changes as `perf(autoresearch): …`.
@@ -53,10 +53,12 @@ zot ext install /path/to/zot-autoresearch
 1. In the target Git repository, run:
 
    ```text
-   /autoresearch init
+   /autoresearch init reduce parser allocations without changing behaviour toml
    ```
 
-2. Edit and commit `.zot/autoresearch.json`. The benchmark must emit text matched by `score_pattern`; capture group 1 must be the numeric score.
+   The final argument selects `json`, `toml`, `yaml`, or `yml`; everything between `init` and the format becomes the configured objective.
+
+2. Edit and commit the generated `.zot/autoresearch.toml`. The benchmark must emit text matched by `score_pattern`; capture group 1 must be the numeric score.
 3. Ensure the repository is clean.
 4. Start the loop:
 
@@ -79,7 +81,7 @@ All actions are routed through one command to keep zot's slash namespace small:
 | Command | Action |
 | --- | --- |
 | `/autoresearch help` | Show the command reference. |
-| `/autoresearch init` | Create `.zot/autoresearch.json`. |
+| `/autoresearch init <goal> <format>` | Create a configuration with the supplied objective. Formats: `json`, `toml`, `yaml`, or `yml`. Calling it without arguments retains the default objective and JSON format. |
 | `/autoresearch start [objective]` | Validate Git/configuration and submit the autonomous loop prompt. An objective argument overrides the configured objective for this run. |
 | `/autoresearch watch` | Open the live panel. |
 | `/autoresearch status` | Show compact totals and the current best score. |
@@ -90,7 +92,7 @@ Unknown subcommands fail with a focused error and point back to `/autoresearch h
 
 ## Configuration
 
-`/autoresearch init` creates:
+`/autoresearch init <goal> <format>` creates the selected configuration and sets `objective` to the supplied goal. For backward compatibility, `/autoresearch init` with no arguments creates `.zot/autoresearch.json` with the default objective:
 
 ```json
 {
@@ -105,6 +107,8 @@ Unknown subcommands fail with a focused error and point back to `/autoresearch h
   "min_delta": 0
 }
 ```
+
+The loader also accepts the same keys from `.zot/autoresearch.toml`, `.zot/autoresearch.yaml`, or `.zot/autoresearch.yml`. Keep exactly one autoresearch configuration file; startup fails rather than silently choosing one when multiple formats are present.
 
 The default benchmark is only a starting point: standard Go benchmark output does not contain a `score:` line. Wrap your real benchmark so it prints one, for example:
 

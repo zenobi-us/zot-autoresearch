@@ -21,7 +21,10 @@ func ensureGitRepository(dir string) error {
 
 func scopedPaths(paths []string) []string {
 	result := append([]string(nil), paths...)
-	return append(result, ":(exclude)"+configRelativePath)
+	for _, configPath := range configRelativePaths {
+		result = append(result, ":(exclude)"+configPath)
+	}
+	return result
 }
 
 func dirtyPaths(dir string, paths []string) (string, error) {

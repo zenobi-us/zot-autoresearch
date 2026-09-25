@@ -8,20 +8,30 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/pelletier/go-toml/v2"
+	"gopkg.in/yaml.v3"
 )
 
 const configRelativePath = ".zot/autoresearch.json"
 
+var configRelativePaths = []string{
+	configRelativePath,
+	".zot/autoresearch.toml",
+	".zot/autoresearch.yaml",
+	".zot/autoresearch.yml",
+}
+
 type config struct {
-	Objective      string   `json:"objective"`
-	Benchmark      string   `json:"benchmark"`
-	ScorePattern   string   `json:"score_pattern"`
-	Direction      string   `json:"direction"`
-	Unit           string   `json:"unit"`
-	EditablePaths  []string `json:"editable_paths"`
-	MaxIterations  int      `json:"max_iterations"`
-	TimeoutSeconds int      `json:"timeout_seconds"`
-	MinDelta       float64  `json:"min_delta"`
+	Objective      string   `json:"objective" toml:"objective" yaml:"objective"`
+	Benchmark      string   `json:"benchmark" toml:"benchmark" yaml:"benchmark"`
+	ScorePattern   string   `json:"score_pattern" toml:"score_pattern" yaml:"score_pattern"`
+	Direction      string   `json:"direction" toml:"direction" yaml:"direction"`
+	Unit           string   `json:"unit" toml:"unit" yaml:"unit"`
+	EditablePaths  []string `json:"editable_paths" toml:"editable_paths" yaml:"editable_paths"`
+	MaxIterations  int      `json:"max_iterations" toml:"max_iterations" yaml:"max_iterations"`
+	TimeoutSeconds int      `json:"timeout_seconds" toml:"timeout_seconds" yaml:"timeout_seconds"`
+	MinDelta       float64  `json:"min_delta" toml:"min_delta" yaml:"min_delta"`
 }
 
 func defaultConfig() config {
@@ -38,26 +48,67 @@ func defaultConfig() config {
 	}
 }
 
-func (a *app) configPath() string {
-	return filepath.Join(a.cwd, filepath.FromSlash(configRelativePath))
+func (a *app) configPath(relativePath string) string {
+	return filepath.Join(a.cwd, filepath.FromSlash(relativePath))
+}
+
+func (a *app) existingConfigPaths() ([]string, error) {
+	var found []string
+	for _, relativePath := range configRelativePaths {
+		_, err := os.Stat(a.configPath(relativePath))
+		switch {
+		case err == nil:
+			found = append(found, relativePath)
+		case errors.Is(err, os.ErrNotExist):
+			continue
+		default:
+			return nil, fmt.Errorf("inspect configuration %s: %w", relativePath, err)
+		}
+	}
+	return found, nil
 }
 
 func (a *app) loadConfig() (config, error) {
-	data, err := os.ReadFile(a.configPath())
+	paths, err := a.existingConfigPaths()
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return config{}, fmt.Errorf("configuration not found; run /autoresearch init")
-		}
-		return config{}, fmt.Errorf("read configuration: %w", err)
+		return config{}, err
 	}
-	var cfg config
-	if err := json.Unmarshal(data, &cfg); err != nil {
-		return config{}, fmt.Errorf("parse configuration: %w", err)
+	if len(paths) == 0 {
+		return config{}, fmt.Errorf("configuration not found; create one of %s (or run /autoresearch init)", strings.Join(configRelativePaths, ", "))
+	}
+	if len(paths) > 1 {
+		return config{}, fmt.Errorf("multiple configuration files found (%s); keep only one", strings.Join(paths, ", "))
+	}
+
+	path := paths[0]
+	data, err := os.ReadFile(a.configPath(path))
+	if err != nil {
+		return config{}, fmt.Errorf("read configuration %s: %w", path, err)
+	}
+	cfg, err := parseConfig(path, data)
+	if err != nil {
+		return config{}, fmt.Errorf("parse configuration %s: %w", path, err)
 	}
 	if err := validateConfig(cfg); err != nil {
 		return config{}, err
 	}
 	return cfg, nil
+}
+
+func parseConfig(path string, data []byte) (config, error) {
+	var cfg config
+	var err error
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".json":
+		err = json.Unmarshal(data, &cfg)
+	case ".toml":
+		err = toml.Unmarshal(data, &cfg)
+	case ".yaml", ".yml":
+		err = yaml.Unmarshal(data, &cfg)
+	default:
+		return config{}, fmt.Errorf("unsupported configuration format %q", filepath.Ext(path))
+	}
+	return cfg, err
 }
 
 func validateConfig(cfg config) error {
@@ -121,20 +172,65 @@ func validateEditablePaths(cwd string, paths []string) error {
 	return nil
 }
 
-func (a *app) initConfig() error {
-	path := a.configPath()
-	if _, err := os.Stat(path); err == nil {
-		return fmt.Errorf("%s already exists", configRelativePath)
-	} else if !errors.Is(err, os.ErrNotExist) {
-		return err
-	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
-	}
-	data, err := json.MarshalIndent(defaultConfig(), "", "  ")
+func (a *app) initConfig(goal, format string) (string, error) {
+	paths, err := a.existingConfigPaths()
 	if err != nil {
-		return err
+		return "", err
 	}
-	data = append(data, '\n')
-	return os.WriteFile(path, data, 0o644)
+	if len(paths) > 0 {
+		return "", fmt.Errorf("configuration already exists: %s", strings.Join(paths, ", "))
+	}
+
+	relativePath, err := configPathForFormat(format)
+	if err != nil {
+		return "", err
+	}
+	cfg := defaultConfig()
+	if goal != "" {
+		cfg.Objective = goal
+	}
+	data, err := marshalConfig(format, cfg)
+	if err != nil {
+		return "", err
+	}
+	if len(data) == 0 || data[len(data)-1] != '\n' {
+		data = append(data, '\n')
+	}
+
+	path := a.configPath(relativePath)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		return "", err
+	}
+	return relativePath, nil
+}
+
+func configPathForFormat(format string) (string, error) {
+	switch strings.ToLower(format) {
+	case "json":
+		return ".zot/autoresearch.json", nil
+	case "toml":
+		return ".zot/autoresearch.toml", nil
+	case "yaml":
+		return ".zot/autoresearch.yaml", nil
+	case "yml":
+		return ".zot/autoresearch.yml", nil
+	default:
+		return "", fmt.Errorf("unsupported format %q; use json, toml, yaml, or yml", format)
+	}
+}
+
+func marshalConfig(format string, cfg config) ([]byte, error) {
+	switch strings.ToLower(format) {
+	case "json":
+		return json.MarshalIndent(cfg, "", "  ")
+	case "toml":
+		return toml.Marshal(cfg)
+	case "yaml", "yml":
+		return yaml.Marshal(cfg)
+	default:
+		return nil, fmt.Errorf("unsupported format %q; use json, toml, yaml, or yml", format)
+	}
 }

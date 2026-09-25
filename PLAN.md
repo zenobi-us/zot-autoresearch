@@ -5,7 +5,7 @@
 ## First release
 
 - [x] One `/autoresearch` command with a discrete subcommand router.
-- [x] Project-local JSON configuration with objective, benchmark, metric, direction, scope, timeout, and iteration limit.
+- [x] Project-local JSON, TOML, or YAML configuration with objective, benchmark, metric, direction, scope, timeout, and iteration limit.
 - [x] An LLM-callable experiment tool that establishes a baseline, benchmarks candidates, mechanically compares scores, commits improvements, and restores rejected in-scope changes.
 - [x] Durable per-project state in the extension data directory.
 - [x] A live modal zot panel showing iterations, gains, accepted commits, rejections, and failures.

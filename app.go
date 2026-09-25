@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -49,10 +50,15 @@ func (a *app) command(args string) ext.Response {
 	case "help":
 		return ext.Display(helpText())
 	case "init":
-		if err := a.initConfig(); err != nil {
+		goal, format, err := parseInitArgs(rest)
+		if err != nil {
 			return ext.Errorf("autoresearch init: %v", err)
 		}
-		return ext.Display("Created " + configRelativePath + ". Edit the benchmark, score pattern, direction, and editable paths, then run /autoresearch start.")
+		path, err := a.initConfig(goal, format)
+		if err != nil {
+			return ext.Errorf("autoresearch init: %v", err)
+		}
+		return ext.Display("Created " + path + ". Edit the benchmark, score pattern, direction, and editable paths, then run /autoresearch start.")
 	case "start":
 		return a.start(rest)
 	case "status":
@@ -68,11 +74,26 @@ func (a *app) command(args string) ext.Response {
 	}
 }
 
+func parseInitArgs(args string) (goal, format string, err error) {
+	fields := strings.Fields(args)
+	if len(fields) == 0 {
+		return "", "json", nil
+	}
+	if len(fields) < 2 {
+		return "", "", errors.New("usage: /autoresearch init <goal> <json|toml|yaml|yml>")
+	}
+	format = strings.ToLower(fields[len(fields)-1])
+	if _, err := configPathForFormat(format); err != nil {
+		return "", "", err
+	}
+	return strings.Join(fields[:len(fields)-1], " "), format, nil
+}
+
 func helpText() string {
 	return strings.TrimSpace(`Autoresearch commands
 
-/autoresearch init             create .zot/autoresearch.json
-/autoresearch start [objective] start a new experiment loop
+/autoresearch init <goal> <format> create a config (format: json, toml, yaml, or yml)
+/autoresearch start [objective]    start a new experiment loop
 /autoresearch watch            open the live iterations panel
 /autoresearch status           show current run totals and best score
 /autoresearch history          open the run history panel
