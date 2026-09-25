@@ -1,56 +1,22 @@
-# zot-cluade-hooks plan
+# zot-autoresearch plan
 
-Discussion: https://github.com/patriceckhart/zot/discussions/170
+`zot-autoresearch` adapts the benchmark-driven loop from Karpathy's autoresearch for zot's extension protocol.
 
-`zot-cluade-hooks` reads Claude-style hook definitions from JSON files and runs matching command hooks through the zot extension protocol.
+## First release
 
-## 1. Possible now
+- [x] One `/autoresearch` command with a discrete subcommand router.
+- [x] Project-local JSON configuration with objective, benchmark, metric, direction, scope, timeout, and iteration limit.
+- [x] An LLM-callable experiment tool that establishes a baseline, benchmarks candidates, mechanically compares scores, commits improvements, and restores rejected in-scope changes.
+- [x] Durable per-project state in the extension data directory.
+- [x] A live modal zot panel showing iterations, gains, accepted commits, rejections, and failures.
+- [x] Guardrails for clean startup, explicit editable paths, bounded benchmark runtime, finite metric parsing, and out-of-scope change detection.
 
-These features use the current zot extension protocol.
+## Follow-up candidates
 
-- Discover hook definitions in `~/.claude/settings.json`, `$ZOT_HOME/zot-cluade-hooks.json`, `.claude/settings.json`, `.claude/settings.local.json`, `.zot/zot-cluade-hooks.json`, `.zot/zot-cluade-hooks.local.json`, `$ZOT_HOOKS_PATH`, and `$ZOT_HOME/extensions/*/hooks/*.json`.
-- Read a top-level `hooks` object from each JSON file.
-- Support `type: "command"` hook entries.
-- Support `matcher` as a regular expression against the zot tool name.
-- Run `PreToolUse` hooks through the synchronous `tool_call` interceptor.
-- Pass a Claude-style JSON payload to each command on standard input.
-- Map exit status `0` to allow.
-- Map exit status `2` to block.
-- Parse `decision: "block"` and `reason` from JSON command output.
-- Subscribe to current asynchronous events:
-  - `SessionStart`
-  - `Stop` through `turn_end`
-  - `Notification` through available zot event notifications
-  - `tool_call` for audit information
-  - `assistant_message` for audit information
-- Enforce a command timeout.
-- Discover JSON hook files contributed by installed extensions.
-- Write diagnostics to standard error.
-- Keep standard output reserved for the zot protocol.
-- Fail open when a hook command times out or returns an invalid response, except that a valid hook exit status `2` blocks the tool.
-
-The Go implementation uses zot's extension SDK for protocol handling and implements hook discovery, `PreToolUse`, current event forwarding, and the `list` diagnostic command. Remaining policy details are tracked below.
-
-## 2. TODO: requires missing zot events
-
-Track implementation against [discussion #170](https://github.com/patriceckhart/zot/discussions/170).
-
-- [ ] Add `user_prompt_submit` support when zot exposes the event.
-- [ ] Add `tool_result` support for `PostToolUse`.
-- [ ] Include the effective tool arguments and the final tool status.
-- [ ] Distinguish completed, failed, blocked, cancelled, and timed-out tool calls.
-- [ ] Add `session_end` support.
-- [ ] Add `pre_compact` and `post_compact` support.
-- [ ] Add `subagent_start` and `subagent_stop` support.
-- [ ] Add `permission_decision` support.
-- [ ] Add synchronous prompt replacement or blocking after zot defines its semantics.
-- [ ] Add event ordering tests for blocked and cancelled tool calls.
-- [ ] Revisit fail-open behavior if zot adds a fail-closed policy mode.
-
-## Open design decisions
-
-- Define the trust prompt or opt-in rule for arbitrary commands from hook files.
-- Define how hook command output maps to tool argument changes.
-- Define whether invalid matchers disable one hook or the full file.
-
-The current discovery order is global Claude settings, the user-level `$ZOT_HOME` hook file, project Claude settings, project-local overrides, project Zot settings, project-local Zot overrides, `ZOT_HOOKS_PATH`, and installed extension hook files. `settings.json` files are now the supported configuration format.
+- [ ] Run candidates in temporary Git worktrees instead of the user's primary worktree.
+- [ ] Add optional correctness checks that hard-block acceptance.
+- [ ] Add asynchronous benchmark jobs for runs longer than zot's 60-second tool timeout.
+- [ ] Add structured `METRIC name=value` support and secondary metrics.
+- [ ] Add JSONL event history, segments, run logs, confidence/noise estimates, and export.
+- [ ] Bundle an autoresearch setup skill and deterministic compaction context.
+- [ ] Add bounded auto-resume when zot exposes a public extension submit API.
